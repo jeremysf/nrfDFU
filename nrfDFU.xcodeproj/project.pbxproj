@@ -1,0 +1,278 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		3FA145471BCCDBF000BEA19A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 3FA145461BCCDBF000BEA19A /* main.m */; };
+		3FA1454E1BCCDC0100BEA19A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3FA1454D1BCCDC0100BEA19A /* Foundation.framework */; };
+		3FA145501BCCDC0500BEA19A /* CoreBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3FA1454F1BCCDC0500BEA19A /* CoreBluetooth.framework */; };
+		3FA145AC1BCD87D800BEA19A /* libz.1.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 3FA145AB1BCD87D800BEA19A /* libz.1.tbd */; };
+		3FA145B11BCD8A2200BEA19A /* NDDFUController.m in Sources */ = {isa = PBXBuildFile; fileRef = 3FA145B01BCD8A2200BEA19A /* NDDFUController.m */; settings = {ASSET_TAGS = (); }; };
+		3FA145B41BCDC28900BEA19A /* NDDFUDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 3FA145B31BCDC28900BEA19A /* NDDFUDevice.m */; settings = {ASSET_TAGS = (); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		3FA145411BCCDBF000BEA19A /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		3FA145431BCCDBF000BEA19A /* nrfDFU */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = nrfDFU; sourceTree = BUILT_PRODUCTS_DIR; };
+		3FA145461BCCDBF000BEA19A /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		3FA1454D1BCCDC0100BEA19A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		3FA1454F1BCCDC0500BEA19A /* CoreBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreBluetooth.framework; path = System/Library/Frameworks/CoreBluetooth.framework; sourceTree = SDKROOT; };
+		3FA145A61BCD864300BEA19A /* libbz2.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libbz2.tbd; path = usr/lib/libbz2.tbd; sourceTree = SDKROOT; };
+		3FA145A91BCD87C300BEA19A /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
+		3FA145AB1BCD87D800BEA19A /* libz.1.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.1.tbd; path = usr/lib/libz.1.tbd; sourceTree = SDKROOT; };
+		3FA145AF1BCD8A2200BEA19A /* NDDFUController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NDDFUController.h; sourceTree = "<group>"; };
+		3FA145B01BCD8A2200BEA19A /* NDDFUController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NDDFUController.m; sourceTree = "<group>"; };
+		3FA145B21BCDC28900BEA19A /* NDDFUDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NDDFUDevice.h; sourceTree = "<group>"; };
+		3FA145B31BCDC28900BEA19A /* NDDFUDevice.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NDDFUDevice.m; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		3FA145401BCCDBF000BEA19A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3FA145AC1BCD87D800BEA19A /* libz.1.tbd in Frameworks */,
+				3FA145501BCCDC0500BEA19A /* CoreBluetooth.framework in Frameworks */,
+				3FA1454E1BCCDC0100BEA19A /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3FA1453A1BCCDBF000BEA19A = {
+			isa = PBXGroup;
+			children = (
+				3FA145AD1BCD87F100BEA19A /* Frameworks */,
+				3FA145451BCCDBF000BEA19A /* nrfDFU */,
+				3FA145441BCCDBF000BEA19A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		3FA145441BCCDBF000BEA19A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				3FA145431BCCDBF000BEA19A /* nrfDFU */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		3FA145451BCCDBF000BEA19A /* nrfDFU */ = {
+			isa = PBXGroup;
+			children = (
+				3FA145461BCCDBF000BEA19A /* main.m */,
+				3FA145AF1BCD8A2200BEA19A /* NDDFUController.h */,
+				3FA145B01BCD8A2200BEA19A /* NDDFUController.m */,
+				3FA145B21BCDC28900BEA19A /* NDDFUDevice.h */,
+				3FA145B31BCDC28900BEA19A /* NDDFUDevice.m */,
+			);
+			path = nrfDFU;
+			sourceTree = "<group>";
+		};
+		3FA145AD1BCD87F100BEA19A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				3FA1454D1BCCDC0100BEA19A /* Foundation.framework */,
+				3FA1454F1BCCDC0500BEA19A /* CoreBluetooth.framework */,
+				3FA145AB1BCD87D800BEA19A /* libz.1.tbd */,
+				3FA145A91BCD87C300BEA19A /* libz.tbd */,
+				3FA145A61BCD864300BEA19A /* libbz2.tbd */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3FA145421BCCDBF000BEA19A /* nrfDFU */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3FA1454A1BCCDBF000BEA19A /* Build configuration list for PBXNativeTarget "nrfDFU" */;
+			buildPhases = (
+				3FA1453F1BCCDBF000BEA19A /* Sources */,
+				3FA145401BCCDBF000BEA19A /* Frameworks */,
+				3FA145411BCCDBF000BEA19A /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = nrfDFU;
+			productName = nrfDFU;
+			productReference = 3FA145431BCCDBF000BEA19A /* nrfDFU */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3FA1453B1BCCDBF000BEA19A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0700;
+				ORGANIZATIONNAME = Superstructure;
+				TargetAttributes = {
+					3FA145421BCCDBF000BEA19A = {
+						CreatedOnToolsVersion = 7.0.1;
+					};
+				};
+			};
+			buildConfigurationList = 3FA1453E1BCCDBF000BEA19A /* Build configuration list for PBXProject "nrfDFU" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 3FA1453A1BCCDBF000BEA19A;
+			productRefGroup = 3FA145441BCCDBF000BEA19A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3FA145421BCCDBF000BEA19A /* nrfDFU */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3FA1453F1BCCDBF000BEA19A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3FA145B11BCD8A2200BEA19A /* NDDFUController.m in Sources */,
+				3FA145B41BCDC28900BEA19A /* NDDFUDevice.m in Sources */,
+				3FA145471BCCDBF000BEA19A /* main.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		3FA145481BCCDBF000BEA19A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		3FA145491BCCDBF000BEA19A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		3FA1454B1BCCDBF000BEA19A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		3FA1454C1BCCDBF000BEA19A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		3FA1453E1BCCDBF000BEA19A /* Build configuration list for PBXProject "nrfDFU" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3FA145481BCCDBF000BEA19A /* Debug */,
+				3FA145491BCCDBF000BEA19A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3FA1454A1BCCDBF000BEA19A /* Build configuration list for PBXNativeTarget "nrfDFU" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3FA1454B1BCCDBF000BEA19A /* Debug */,
+				3FA1454C1BCCDBF000BEA19A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 3FA1453B1BCCDBF000BEA19A /* Project object */;
+}
