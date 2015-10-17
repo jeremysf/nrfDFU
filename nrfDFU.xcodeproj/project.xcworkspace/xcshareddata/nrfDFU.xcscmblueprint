@@ -1,0 +1,30 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "AD6FAD47AD13AE8E72A7940891B16762AE1E382C",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "F0C302ECCECFB665EA48C7A535F2A9D012C2B8FA" : 0,
+    "AD6FAD47AD13AE8E72A7940891B16762AE1E382C" : 0
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "0357EC49-9C39-49F5-8303-0EE9FFB9D308",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "F0C302ECCECFB665EA48C7A535F2A9D012C2B8FA" : "IOS-nRF-Toolbox\/",
+    "AD6FAD47AD13AE8E72A7940891B16762AE1E382C" : "nrfDFU\/"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "nrfDFU",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "nrfDFU.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/github.com\/jeremysf\/nrfDFU.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "AD6FAD47AD13AE8E72A7940891B16762AE1E382C"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/github.com\/NordicSemiconductor\/IOS-nRF-Toolbox.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "F0C302ECCECFB665EA48C7A535F2A9D012C2B8FA"
+    }
+  ]
+}

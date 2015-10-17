@@ -42,7 +42,9 @@ int main(int argc, const char * argv[]) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
                 for( int i = 0; i < dfuController.devices.count; i++ ) {
                     NDDFUDevice* device = dfuController.devices[i];
-                    fprintf(stdout, "%s[%s]\n", device.peripheral.name.UTF8String, device.peripheral.identifier.UUIDString.UTF8String);
+                    if( device.isConnected ) {
+                        fprintf(stdout, "%s[%s]\n", device.peripheral.name.UTF8String, device.peripheral.identifier.UUIDString.UTF8String);
+                    }
                 }
                 exit(0);
             });

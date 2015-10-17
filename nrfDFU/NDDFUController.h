@@ -12,6 +12,7 @@
 @class NDDFUDevice;
 
 extern NSString *const kDeviceDiscoveryNotification;
+extern NSString *const kDeviceDiscoveryDevice;
 
 @interface NDDFUController : NSObject<CBCentralManagerDelegate> {
 @private

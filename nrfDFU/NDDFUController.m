@@ -10,6 +10,7 @@
 #import "NDDFUDevice.h"
 
 NSString *const kDeviceDiscoveryNotification = @"kDeviceDiscoveryNotification";
+NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
 
 @interface NDDFUController () {
     
@@ -28,7 +29,7 @@ NSString *const kDeviceDiscoveryNotification = @"kDeviceDiscoveryNotification";
         return nil;
     }
     _devices = @[];
-    NSDictionary* options = @{CBCentralManagerOptionShowPowerAlertKey:[NSNumber numberWithBool:YES]};
+    NSDictionary* options = @{CBCentralManagerOptionShowPowerAlertKey:[NSNumber numberWithBool:NO]};
     _centralManager = [[CBCentralManager alloc] initWithDelegate:self
                                                            queue:nil
                                                          options:options];
@@ -41,22 +42,26 @@ NSString *const kDeviceDiscoveryNotification = @"kDeviceDiscoveryNotification";
                                                       object:self
                                                        queue:nil
                                                   usingBlock:^(NSNotification * _Nonnull note) {
-                                                      if( _devices.count > 0 ) {
-                                                          if( uuid == nil ) {
-                                                              device = _devices[0];
+                                                      if( device == nil ) {
+                                                          NDDFUDevice* candidateDevice = note.userInfo[kDeviceDiscoveryDevice];
+                                                          if( uuid != nil && [[candidateDevice.peripheral.identifier.UUIDString uppercaseString] isEqualToString:[uuid uppercaseString]] ) {
+                                                              // if the user specified a uuid and we found it, let's update it!
+                                                              device = candidateDevice;
+                                                              [device updateWithApplication:applicationFileName completed:completed];
                                                           } else {
-                                                              for( int i = 0; i < _devices.count; i++ ) {
-                                                                  if( [[((NDDFUDevice*)_devices[i]).peripheral.identifier.UUIDString uppercaseString] isEqualToString:[uuid uppercaseString]] ) {
-                                                                      device = _devices[i];
-                                                                      break;
-                                                                  }
-                                                              }
+                                                              // if the user didn't specify a uuid, we need to connect to it and see if it supports the DFU service
+                                                              [self connect:candidateDevice
+                                                                  connected:^(NSError *error) {
+                                                                      if( error == nil && device == nil ) {
+                                                                          device = candidateDevice;
+                                                                          [device updateWithApplication:applicationFileName completed:completed];
+                                                                      }
+                                                                  }];
                                                           }
-                                                          [device updateWithApplication:applicationFileName completed:completed];
                                                       }
                                                   }];
-    // wait a little bit
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(15 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        // allow for 15 second timeout finding the device
         if( device == nil ) {
             NSError* error = nil;
             if( uuid == nil ) {
@@ -68,13 +73,23 @@ NSString *const kDeviceDiscoveryNotification = @"kDeviceDiscoveryNotification";
                                             code:0
                                         userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"Unable to find device '%@'", [NSString stringWithFormat:@"Unable to find device '%@'", uuid]]}];
             }
-            completed(error);
+            if( completed != nil ) {
+                completed(error);
+            }
         }
     });
     [[NSRunLoop currentRunLoop] run];
 }
 
-- (void)discover {    
+- (void)discover {
+    [[NSNotificationCenter defaultCenter] addObserverForName:kDeviceDiscoveryNotification
+                                                      object:self
+                                                       queue:nil
+                                                  usingBlock:^(NSNotification * _Nonnull note) {
+                                                      NDDFUDevice* device = note.userInfo[kDeviceDiscoveryDevice];
+                                                      [self connect:device connected:nil];
+                                                  }];
+    
     [[NSRunLoop currentRunLoop] run];
 }
 
@@ -104,16 +119,16 @@ NSString *const kDeviceDiscoveryNotification = @"kDeviceDiscoveryNotification";
 - (void)connect:(NDDFUDevice*)device connected:(void (^)(NSError* error))connected {
     // wait for connection
     [[NSNotificationCenter defaultCenter] addObserverForName:kDeviceConnectionNotification
-                                                      object:self
+                                                      object:device
                                                        queue:nil
                                                   usingBlock:^(NSNotification * _Nonnull note) {
-                                                      if( device.isConnected ) {
+                                                      if( device.isConnected && connected != nil ) {
                                                           connected(nil);
                                                       }
                                                   }];
     // connection timeout
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        if( !device.isConnected ) {
+        if( !device.isConnected && connected != nil ) {
             connected([NSError errorWithDomain:@"DFU"
                                           code:0
                                       userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"timed out connecting to device %@", device.peripheral.identifier.UUIDString]}]);
@@ -123,13 +138,16 @@ NSString *const kDeviceDiscoveryNotification = @"kDeviceDiscoveryNotification";
                                options:nil];
 }
 
-- (void)addDeviceForPeripheral:(CBPeripheral*)peripheral RSSI:(float)RSSI {
+- (NDDFUDevice*)addDeviceForPeripheral:(CBPeripheral*)peripheral RSSI:(float)RSSI {
     [self willChangeValueForKey:@"devices"];
     NDDFUDevice* device = [[NDDFUDevice alloc] initWithPeripheral:peripheral RSSI:RSSI controller:self];
     _devices = [_devices arrayByAddingObject:device];
     [self didChangeValueForKey:@"devices"];
     [[NSNotificationCenter defaultCenter] postNotificationName:kDeviceDiscoveryNotification
-                                                        object:self];
+                                                        object:self
+                                                      userInfo:@{kDeviceDiscoveryDevice:device}];
+    return device;
+     
 }
 
 - (void)centralManager:(CBCentralManager *)central didDiscoverPeripheral:(CBPeripheral *)peripheral advertisementData:(NSDictionary *)advertisementData RSSI:(NSNumber *)RSSI {
@@ -137,7 +155,9 @@ NSString *const kDeviceDiscoveryNotification = @"kDeviceDiscoveryNotification";
     for( NSUInteger i = 0; i < _devices.count; i++ ) {
         NDDFUDevice* device = _devices[i];
         if( [[device.peripheral identifier] isEqual:peripheral.identifier] ) {
-            device.RSSI = [RSSI floatValue];
+            if( RSSI != nil) {
+                device.RSSI = [RSSI floatValue];
+            }
             return;
         }
     }
@@ -148,28 +168,13 @@ NSString *const kDeviceDiscoveryNotification = @"kDeviceDiscoveryNotification";
 }
 
 - (void)centralManager:(CBCentralManager *)central didRetrievePeripherals:(NSArray *)peripherals {
-    for( NSUInteger i = 0; i < peripherals.count; i++ ) {
-        CBPeripheral* peripheral = peripherals[i];
-        // check and see if we have this device yet
-        bool found = false;
-        for( NSUInteger j = 0; j < _devices.count; j++ ) {
-            NDDFUDevice* device = _devices[i];
-            if( [device.peripheral.identifier isEqual:peripheral.identifier] ) {
-                found = true;
-                break;
-            }
-        }
-        // if we don't, then add it to our collection
-        if( !found ) {
-            [self addDeviceForPeripheral:peripheral RSSI:-100];
-        }
-    }
 }
 
 - (void)centralManagerDidUpdateState:(CBCentralManager *)central {
     if( central.state == CBCentralManagerStatePoweredOn ) {
-        [_centralManager scanForPeripheralsWithServices:@[[CBUUID UUIDWithString:kDeviceDFUServiceUUID]]
-                                                options:nil];
+        // can't scan for peripherals with the service because the service is not advertised
+        [_centralManager scanForPeripheralsWithServices:nil //@[[CBUUID UUIDWithString:kDeviceDFUServiceUUID]]
+                                                options:@{CBCentralManagerScanOptionAllowDuplicatesKey:[NSNumber numberWithBool:NO]}];
     } else {
         [_centralManager stopScan];
         [self willChangeValueForKey:@"devices"];

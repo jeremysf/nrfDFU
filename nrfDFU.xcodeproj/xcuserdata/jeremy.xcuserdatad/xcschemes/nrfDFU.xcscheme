@@ -63,8 +63,16 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "discover foo.hex"
+            argument = "update"
             isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "/Users/jeremy/Development/workspace/nRF51_SDK_9/examples/ble_peripheral/ble_app_hrs/pca10028/s110_with_dfu/armgcc/_build/nrf51422_xxac_s110.bin"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "37906741-4047-40CB-A422-52B92C836B90"
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
       <AdditionalOptions>
