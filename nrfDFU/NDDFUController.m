@@ -8,6 +8,7 @@
 
 #import "NDDFUController.h"
 #import "NDDFUDevice.h"
+#import "NDDFUFirmware.h"
 
 NSString *const kDeviceDiscoveryNotification = @"kDeviceDiscoveryNotification";
 NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
@@ -22,47 +23,60 @@ NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
 @implementation NDDFUController
 
 @synthesize devices = _devices;
+@synthesize centralManager = _centralManager;
 
 - (id)init {
     self = [super init];
     if( self == nil ) {
         return nil;
     }
+    _deviceToUpdate = nil;
+    _deviceToUpdateUUID = nil;
     _devices = @[];
-    NSDictionary* options = @{CBCentralManagerOptionShowPowerAlertKey:[NSNumber numberWithBool:NO]};
-    _centralManager = [[CBCentralManager alloc] initWithDelegate:self
-                                                           queue:nil
-                                                         options:options];
     return self;
 }
 
+- (void)dealloc {
+    if( _centralManager != nil ) {
+        _centralManager.delegate = nil;
+    }
+}
+
+- (void)deviceConnected:(NDDFUDevice *)device {
+    if( _deviceToUpdate != nil && _deviceToUpdateUUID != nil ) {
+        _deviceToUpdateUUID = nil;
+        [_deviceToUpdate startUpdateWithApplication:_firmware];
+    }    
+}
+
+- (void)deviceError:(NDDFUDevice *)device error:(NSError*)error {
+    if( _updateCompleteHandler != nil ) {
+        _updateCompleteHandler(error);
+        _updateCompleteHandler = nil;
+    }
+}
+
+- (void)deviceUpdated:(NDDFUDevice *)device {
+    if( _updateCompleteHandler != nil ) {
+        _updateCompleteHandler(nil);
+        _updateCompleteHandler = nil;
+    }
+}
+
 - (void)updateWithApplication:(NSString *)applicationFileName uuid:(NSString *)uuid completed:(void (^)(NSError* error))completed {
-    __block NDDFUDevice* device = nil;
-    [[NSNotificationCenter defaultCenter] addObserverForName:kDeviceDiscoveryNotification
-                                                      object:self
-                                                       queue:nil
-                                                  usingBlock:^(NSNotification * _Nonnull note) {
-                                                      if( device == nil ) {
-                                                          NDDFUDevice* candidateDevice = note.userInfo[kDeviceDiscoveryDevice];
-                                                          if( uuid != nil && [[candidateDevice.peripheral.identifier.UUIDString uppercaseString] isEqualToString:[uuid uppercaseString]] ) {
-                                                              // if the user specified a uuid and we found it, let's update it!
-                                                              device = candidateDevice;
-                                                              [device updateWithApplication:applicationFileName completed:completed];
-                                                          } else {
-                                                              // if the user didn't specify a uuid, we need to connect to it and see if it supports the DFU service
-                                                              [self connect:candidateDevice
-                                                                  connected:^(NSError *error) {
-                                                                      if( error == nil && device == nil ) {
-                                                                          device = candidateDevice;
-                                                                          [device updateWithApplication:applicationFileName completed:completed];
-                                                                      }
-                                                                  }];
-                                                          }
-                                                      }
-                                                  }];
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(15 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        // allow for 15 second timeout finding the device
-        if( device == nil ) {
+    NSError* error;
+    _firmware = [[NDDFUFirmware alloc] initWithApplicationURL:[NSURL fileURLWithPath:applicationFileName]];
+    if( ![_firmware loadFileData:&error] ) {
+        completed(error);
+        return;
+    }
+    _updateCompleteHandler = completed;
+    _deviceToUpdateUUID = uuid;
+    // start discovering devices
+    [self initCentralManager];
+    // allow for 5 second timeout finding the device
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if( _deviceToUpdate == nil ) {
             NSError* error = nil;
             if( uuid == nil ) {
                 error = [NSError errorWithDomain:@"DFU"
@@ -74,23 +88,25 @@ NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
                                         userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"Unable to find device '%@'", [NSString stringWithFormat:@"Unable to find device '%@'", uuid]]}];
             }
             if( completed != nil ) {
+                _updateCompleteHandler = nil;
                 completed(error);
             }
         }
     });
-    [[NSRunLoop currentRunLoop] run];
+    CFRunLoopRun();
 }
 
 - (void)discover {
-    [[NSNotificationCenter defaultCenter] addObserverForName:kDeviceDiscoveryNotification
-                                                      object:self
-                                                       queue:nil
-                                                  usingBlock:^(NSNotification * _Nonnull note) {
-                                                      NDDFUDevice* device = note.userInfo[kDeviceDiscoveryDevice];
-                                                      [self connect:device connected:nil];
-                                                  }];
-    
-    [[NSRunLoop currentRunLoop] run];
+    // start discovering devices
+    [self initCentralManager];
+    dispatch_main();
+}
+
+- (void)initCentralManager {
+    NSDictionary* options = @{CBCentralManagerOptionShowPowerAlertKey:[NSNumber numberWithBool:NO]};
+    _centralManager = [[CBCentralManager alloc] initWithDelegate:self
+                                                           queue:nil
+                                                         options:options];
 }
 
 - (NDDFUDevice*)deviceForPeripheral:(CBPeripheral*)peripheral {
@@ -103,51 +119,27 @@ NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
     return nil;
 }
 
+- (NDDFUDevice*)addDeviceForPeripheral:(CBPeripheral*)peripheral RSSI:(float)RSSI {
+    [self willChangeValueForKey:@"devices"];
+    NDDFUDevice* device = [[NDDFUDevice alloc] initWithPeripheral:peripheral RSSI:RSSI controller:self];
+    device.delegate = self;
+    _devices = [_devices arrayByAddingObject:device];
+    [self didChangeValueForKey:@"devices"];
+    return device;
+}
+
 - (void)centralManager:(CBCentralManager *)central didConnectPeripheral:(CBPeripheral *)peripheral {
     NDDFUDevice* device = [self deviceForPeripheral:peripheral];
-    [device refresh];
+    [device onPeripheralConnected:central];
 }
 
 - (void)centralManager:(CBCentralManager *)central didDisconnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
     NDDFUDevice* device = [self deviceForPeripheral:peripheral];
-    [device refresh];
+    [device onPeripheralDisconnected:central];
 }
 
 - (void)centralManager:(CBCentralManager *)central didFailToConnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
-}
-
-- (void)connect:(NDDFUDevice*)device connected:(void (^)(NSError* error))connected {
-    // wait for connection
-    [[NSNotificationCenter defaultCenter] addObserverForName:kDeviceConnectionNotification
-                                                      object:device
-                                                       queue:nil
-                                                  usingBlock:^(NSNotification * _Nonnull note) {
-                                                      if( device.isConnected && connected != nil ) {
-                                                          connected(nil);
-                                                      }
-                                                  }];
-    // connection timeout
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        if( !device.isConnected && connected != nil ) {
-            connected([NSError errorWithDomain:@"DFU"
-                                          code:0
-                                      userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"timed out connecting to device %@", device.peripheral.identifier.UUIDString]}]);
-        }
-    });
-    [_centralManager connectPeripheral:device.peripheral
-                               options:nil];
-}
-
-- (NDDFUDevice*)addDeviceForPeripheral:(CBPeripheral*)peripheral RSSI:(float)RSSI {
-    [self willChangeValueForKey:@"devices"];
-    NDDFUDevice* device = [[NDDFUDevice alloc] initWithPeripheral:peripheral RSSI:RSSI controller:self];
-    _devices = [_devices arrayByAddingObject:device];
-    [self didChangeValueForKey:@"devices"];
-    [[NSNotificationCenter defaultCenter] postNotificationName:kDeviceDiscoveryNotification
-                                                        object:self
-                                                      userInfo:@{kDeviceDiscoveryDevice:device}];
-    return device;
-     
+    // don't care as this will get caught by the timeout
 }
 
 - (void)centralManager:(CBCentralManager *)central didDiscoverPeripheral:(CBPeripheral *)peripheral advertisementData:(NSDictionary *)advertisementData RSSI:(NSNumber *)RSSI {
@@ -161,7 +153,18 @@ NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
             return;
         }
     }
-    [self addDeviceForPeripheral:peripheral RSSI:[RSSI floatValue]];
+    // otherwise add this device
+    NDDFUDevice* device = [self addDeviceForPeripheral:peripheral RSSI:[RSSI floatValue]];
+    if( _deviceToUpdateUUID != nil ) {
+        if( [[device.peripheral.identifier.UUIDString uppercaseString] isEqualToString:[_deviceToUpdateUUID uppercaseString]] ) {
+            _deviceToUpdate = device;
+            [_centralManager connectPeripheral:device.peripheral
+                                       options:nil];
+        }
+    } else {
+        [_centralManager connectPeripheral:device.peripheral
+                                   options:nil];
+    }
 }
 
 - (void)centralManager:(CBCentralManager *)central didRetrieveConnectedPeripherals:(NSArray *)peripherals {
@@ -174,7 +177,7 @@ NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
     if( central.state == CBCentralManagerStatePoweredOn ) {
         // can't scan for peripherals with the service because the service is not advertised
         [_centralManager scanForPeripheralsWithServices:nil //@[[CBUUID UUIDWithString:kDeviceDFUServiceUUID]]
-                                                options:@{CBCentralManagerScanOptionAllowDuplicatesKey:[NSNumber numberWithBool:NO]}];
+                                                options:@{CBCentralManagerScanOptionAllowDuplicatesKey:@YES}];
     } else {
         [_centralManager stopScan];
         [self willChangeValueForKey:@"devices"];
@@ -184,6 +187,6 @@ NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
 }
 
 - (void)centralManager:(CBCentralManager *)central willRestoreState:(NSDictionary *)dict {
-    
 }
+
 @end

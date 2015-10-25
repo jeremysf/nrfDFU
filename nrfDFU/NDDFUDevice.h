@@ -14,8 +14,6 @@ extern NSString *const kDeviceControlPointCharacteristicUUID;
 extern NSString *const kDevicePacketCharacteristicUUID;
 extern NSString *const kDeviceVersionCharacteristicUUID;
 
-extern NSString *const kDeviceConnectionNotification;
-
 typedef enum {
     START_INIT_PACKET = 0x00,
     END_INIT_PACKET = 0x01
@@ -49,7 +47,25 @@ typedef enum {
     APPLICATION = 0x04
 } DfuFirmwareTypes;
 
+typedef enum {
+    STATE_IDLE,
+    STATE_QUERYING_VERSION,
+    STATE_ENTERING_BOOTLOADER,
+    STATE_STARTING_UPDATE,
+    STATE_ERROR
+} DfuState;
+
 @class NDDFUController;
+@class NDDFUFirmware;
+@class NDDFUDevice;
+
+@protocol NDDFUDeviceDelegate
+
+- (void)deviceConnected:(NDDFUDevice*)device;
+- (void)deviceError:(NDDFUDevice*)device error:(NSError*)error;
+- (void)deviceUpdated:(NDDFUDevice*)device;
+
+@end
 
 @interface NDDFUDevice : NSObject<CBPeripheralDelegate> {
 @private
@@ -60,14 +76,23 @@ typedef enum {
     CBCharacteristic* _controlPointCharacteristic;
     CBCharacteristic* _packetCharacteristic;
     CBCharacteristic* _versionCharacteristic;
+    NSUInteger _versionMajor;
+    NSUInteger _versionMinor;
+    NDDFUFirmware* _firmware;
+    DfuState _state;
+    id<NDDFUDeviceDelegate> _delegate;
 }
 
 @property (readonly, nonatomic) CBPeripheral* peripheral;
+@property (nonatomic) id<NDDFUDeviceDelegate> delegate;
 @property (nonatomic) float RSSI;
+@property (readonly) NSUInteger versionMajor;
+@property (readonly) NSUInteger versionMinor;
 
 - (instancetype)initWithPeripheral:(CBPeripheral*)peripheral RSSI:(float)RSSI controller:(NDDFUController*)controller;
-- (void)updateWithApplication:(NSString*)applicationFileName completed:(void (^)(NSError* error))completed;
-- (void)refresh;
+- (void)startUpdateWithApplication:(NDDFUFirmware*)firmware;
+- (void)onPeripheralConnected:(CBCentralManager*)manager;
+- (void)onPeripheralDisconnected:(CBCentralManager*)manager;
 - (BOOL)isConnected;
 
 @end

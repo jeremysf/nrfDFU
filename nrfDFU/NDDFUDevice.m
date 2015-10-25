@@ -15,8 +15,6 @@ NSString *const kDeviceControlPointCharacteristicUUID = @"00001531-1212-EFDE-152
 NSString *const kDevicePacketCharacteristicUUID = @"00001532-1212-EFDE-1523-785FEABCD123";
 NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785FEABCD123";
 
-NSString *const kDeviceConnectionNotification = @"kDeviceConnectionNotification";
-
 @interface NDDFUDevice () {
     void (^_versionCallback)(uint8_t major, uint8_t minor, NSError *error);
 }
@@ -27,7 +25,9 @@ NSString *const kDeviceConnectionNotification = @"kDeviceConnectionNotification"
 
 @synthesize peripheral = _peripheral;
 @synthesize RSSI = _RSSI;
-
+@synthesize versionMajor = _versionMajor;
+@synthesize versionMinor = _versionMinor;
+@synthesize delegate = _delegate;
 
 - (instancetype)initWithPeripheral:(CBPeripheral*)peripheral RSSI:(float)RSSI controller:(NDDFUController *)controller {
     self = [super init];
@@ -40,8 +40,17 @@ NSString *const kDeviceConnectionNotification = @"kDeviceConnectionNotification"
         _versionCharacteristic = nil;
         _service = nil;
         _RSSI = RSSI;
+        _versionMajor = 0;
+        _versionMinor = 0;
+        _delegate = nil;
+        _state = STATE_IDLE;
     }
     return self;
+}
+
+- (void)dealloc {
+    _peripheral.delegate = nil;
+    _peripheral = nil;
 }
 
 - (BOOL)isConnected {
@@ -49,16 +58,24 @@ NSString *const kDeviceConnectionNotification = @"kDeviceConnectionNotification"
         (_controlPointCharacteristic != nil) && (_packetCharacteristic != nil) && (_versionCharacteristic != nil);
 }
 
-- (void)refresh {
-    if( _peripheral.state == CBPeripheralStateConnected ) {
-        if( _service == nil || _controlPointCharacteristic == nil || _packetCharacteristic == nil || _versionCharacteristic == nil ) {
-            [_peripheral discoverServices:[NSArray arrayWithObject:[CBUUID UUIDWithString:kDeviceDFUServiceUUID]]];
-        }
-    } else {
-        _service = nil;
-        _controlPointCharacteristic = nil;
-        _packetCharacteristic = nil;
-        _versionCharacteristic = nil;
+- (void)onPeripheralConnected:(CBCentralManager*)manager {
+    if( _service == nil || _controlPointCharacteristic == nil || _packetCharacteristic == nil || _versionCharacteristic == nil ) {
+        [_peripheral discoverServices:[NSArray arrayWithObject:[CBUUID UUIDWithString:kDeviceDFUServiceUUID]]];
+    }
+}
+
+- (void)onPeripheralDisconnected:(CBCentralManager*)manager {
+    _service = nil;
+    _controlPointCharacteristic = nil;
+    _packetCharacteristic = nil;
+    _versionCharacteristic = nil;
+    _versionMajor = 0;
+    _versionMinor = 0;
+    // potentially attempt to reconnect
+    if( _state == STATE_ENTERING_BOOTLOADER ) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [manager connectPeripheral:_peripheral options:nil];
+        });
     }
 }
 
@@ -83,7 +100,17 @@ NSString *const kDeviceConnectionNotification = @"kDeviceConnectionNotification"
         }
     }
     if( _controlPointCharacteristic != nil && _packetCharacteristic != nil && _versionCharacteristic != nil ) {
-        [[NSNotificationCenter defaultCenter] postNotificationName:kDeviceConnectionNotification object:self];
+        if( _state == STATE_ENTERING_BOOTLOADER ) {
+            // after regaining connection, query the version to see
+            //  if we successfully entered the bootloader
+            [self _queryVersion];
+        } else if( _state != STATE_IDLE ){
+            // we're reconnecting during the middle of the update process
+        } else {
+            if( _delegate != nil ) {
+                [_delegate deviceConnected:self];
+            }
+        }
     }
 }
 
@@ -96,79 +123,96 @@ NSString *const kDeviceConnectionNotification = @"kDeviceConnectionNotification"
         }
     } else if( [characteristic.UUID isEqual:[CBUUID UUIDWithString:kDeviceVersionCharacteristicUUID]] ) {
         const uint8_t *version = [characteristic.value bytes];
-        if( _versionCallback ) {
-            void (^cb)(uint8_t major, uint8_t minor, NSError *error) = _versionCallback;
-            _versionCallback = nil;
-            cb(version[1], version[0], nil);
+        _versionCallback = nil;
+        _versionMajor = version[1];
+        _versionMinor = version[0];
+        if( _versionMinor == 1 ) {
+            // if the version is 1, then we are in the app, we need
+            //  to restart into the bootloader
+            [self _restartIntoBootloader];
+        } else {
+            // if the version is not 1, then we are in the bootloader, so
+            //  we'll start the DFU process
+            [self _startDFURequest];
         }
-        // what to do with this?
     } else {
+        const uint8_t* response = [characteristic.value bytes];
+        [self _handleDeviceResponse:response[0]
+                      requestedCode:response[1]
+                     responseStatus:response[2]];
     }
 }
 
-- (void)readVersion:(void (^)(uint8_t major, uint8_t minor, NSError *error))completed {
-    _versionCallback = completed;
+- (void)_queryVersion {
+    // kick off the update by reading the version
     [_peripheral readValueForCharacteristic:_versionCharacteristic];
+    _state = STATE_QUERYING_VERSION;
 }
 
-- (void)_updateWithApplication:(NSString *)applicationFileName completed:(void (^)(NSError *))completed {
-    // check the DFU version of the target
-    [self readVersion:^(uint8_t major, uint8_t minor, NSError *error) {
-        if( error != nil ) {
-            if( completed != nil ) {
-                completed(error);
-            }
-            return;
-        }
-        // check to see if we support the DFU version
-        if( minor < 1 ) {
-            if( completed != nil ) {
-                completed([NSError errorWithDomain:@"DFU"
-                                              code:0
-                                          userInfo:@{NSLocalizedDescriptionKey: @"Unsupported DFU version."}]);
-            }
-            return;
-        }
-        // load up the firmware
-        NDDFUFirmware* firmware = [[NDDFUFirmware alloc] initWithApplicationURL:[NSURL fileURLWithPath:applicationFileName]];
-        if( ![firmware loadFileData:&error] ) {
-            if( completed != nil ) {
-                completed(error);
-            }
-            return;
-        }
-        // listen for packets from the control point
-        [_peripheral setNotifyValue:YES forCharacteristic:_controlPointCharacteristic];
-        // start the DFU
-        uint8_t startDFURequest[] = {START_DFU_REQUEST, APPLICATION};
-        [_peripheral writeValue:[NSData dataWithBytes:&startDFURequest length:sizeof(startDFURequest)]
+- (void)_restartIntoBootloader {
+    // listen for packets from the control point
+    [_peripheral setNotifyValue:YES forCharacteristic:_controlPointCharacteristic];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        // basically restart the device into DFU mode
+        uint8_t startDFURequest[] = {START_DFU_REQUEST, APPLICATION };
+        [_peripheral writeValue:[NSData dataWithBytes:startDFURequest length:sizeof(startDFURequest)]
               forCharacteristic:_controlPointCharacteristic type:CBCharacteristicWriteWithResponse];
-        // write the file size
-        uint32_t fileSizeCollection[3] = { 0, 0, (uint32_t)firmware.data.length };
-        [_peripheral writeValue:[NSData dataWithBytes:&fileSizeCollection length:sizeof(fileSizeCollection)]
-                forCharacteristic:_packetCharacteristic type:CBCharacteristicWriteWithoutResponse];
-        // we're done!
-        if( completed != nil ) {
-            completed(nil);
-        }
-    }];
+        _state = STATE_ENTERING_BOOTLOADER;
+    });
 }
 
-- (void)updateWithApplication:(NSString*)applicationFileName completed:(void (^)(NSError* error))completed {
-    if( self.isConnected ) {
-        [self _updateWithApplication:applicationFileName completed:completed];
-    } else {
-        // connect to the device
-        [_controller connect:self connected:^(NSError *error) {
-            if( error != nil ) {
-                if( completed != nil ) {
-                    completed(error);
+- (void)_startDFURequest {
+    // listen for packets from the control point
+    [_peripheral setNotifyValue:YES forCharacteristic:_controlPointCharacteristic];
+    // start the DFU
+    uint8_t startDFURequest[] = {START_DFU_REQUEST, APPLICATION};
+    [_peripheral writeValue:[NSData dataWithBytes:&startDFURequest length:sizeof(startDFURequest)]
+          forCharacteristic:_controlPointCharacteristic type:CBCharacteristicWriteWithResponse];
+    // write the file size
+    uint32_t fileSizeCollection[3] = { 0, 0, (uint32_t)_firmware.data.length };
+    [_peripheral writeValue:[NSData dataWithBytes:fileSizeCollection length:sizeof(fileSizeCollection)]
+          forCharacteristic:_packetCharacteristic type:CBCharacteristicWriteWithoutResponse];
+    _state = STATE_STARTING_UPDATE;
+}
+
+- (void)_handleDeviceResponse:(uint8_t)responseCode requestedCode:(uint8_t)requestedCode responseStatus:(uint8_t)responseStatus {
+    if( responseCode == RESPONSE_CODE ) {
+        switch( requestedCode ) {
+            case START_DFU_REQUEST:
+                switch (responseStatus) {
+                    case OPERATION_SUCCESSFUL_RESPONSE:
+                        //[dfuRequests sendInitPacket:self.firmwareFileMetaData];
+                        break;
+                    case OPERATION_NOT_SUPPORTED_RESPONSE:
+                        //[dfuDelegate onError:errorMessage];
+                        //[dfuRequests resetSystem];
+                        break;
+                    default:
+                        //[dfuDelegate onError:errorMessage];
+                        //[dfuRequests resetSystem];
+                        break;
                 }
-            } else {
-                [self _updateWithApplication:applicationFileName completed:completed];
-            }
-        }];
+                break;
+            case RECEIVE_FIRMWARE_IMAGE_REQUEST:
+                //[self processReceiveFirmwareResponseStatus];
+                break;
+            case VALIDATE_FIRMWARE_REQUEST:
+                //[self processValidateFirmwareResponseStatus];
+                break;
+            case INITIALIZE_DFU_PARAMETERS_REQUEST:
+                //[self processInitPacketResponseStatus];
+                break;
+        }
+    } else if( responseCode == PACKET_RECEIPT_NOTIFICATION_RESPONSE ) {
     }
+}
+
+- (void)startUpdateWithApplication:(NDDFUFirmware*)firmware {
+    _firmware = firmware;
+    // query the version, if the app is running and not the bootloader, this will result
+    //  in entering the bootloader, if we're already in the bootloader, this will result in the
+    //  DFU process starting
+    [self _queryVersion];
 }
 
 @end
