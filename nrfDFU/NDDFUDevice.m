@@ -59,12 +59,14 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
 }
 
 - (void)onPeripheralConnected:(CBCentralManager*)manager {
+    fprintf(stdout, "connecting...\n");
     if( _service == nil || _controlPointCharacteristic == nil || _packetCharacteristic == nil || _versionCharacteristic == nil ) {
         [_peripheral discoverServices:[NSArray arrayWithObject:[CBUUID UUIDWithString:kDeviceDFUServiceUUID]]];
     }
 }
 
 - (void)onPeripheralDisconnected:(CBCentralManager*)manager {
+    fprintf(stdout, "disconnecting...\n");
     _service = nil;
     _controlPointCharacteristic = nil;
     _packetCharacteristic = nil;
@@ -152,7 +154,8 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
 - (void)_restartIntoBootloader {
     // listen for packets from the control point
     [_peripheral setNotifyValue:YES forCharacteristic:_controlPointCharacteristic];
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        fprintf(stdout, "restarting into bootloader...\n");
         // basically restart the device into DFU mode
         uint8_t startDFURequest[] = {START_DFU_REQUEST, APPLICATION };
         [_peripheral writeValue:[NSData dataWithBytes:startDFURequest length:sizeof(startDFURequest)]
@@ -164,15 +167,45 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
 - (void)_startDFURequest {
     // listen for packets from the control point
     [_peripheral setNotifyValue:YES forCharacteristic:_controlPointCharacteristic];
-    // start the DFU
-    uint8_t startDFURequest[] = {START_DFU_REQUEST, APPLICATION};
-    [_peripheral writeValue:[NSData dataWithBytes:&startDFURequest length:sizeof(startDFURequest)]
-          forCharacteristic:_controlPointCharacteristic type:CBCharacteristicWriteWithResponse];
-    // write the file size
-    uint32_t fileSizeCollection[3] = { 0, 0, (uint32_t)_firmware.data.length };
-    [_peripheral writeValue:[NSData dataWithBytes:fileSizeCollection length:sizeof(fileSizeCollection)]
-          forCharacteristic:_packetCharacteristic type:CBCharacteristicWriteWithoutResponse];
-    _state = STATE_STARTING_UPDATE;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        // start the DFU
+        uint8_t startDFURequest[] = {START_DFU_REQUEST, APPLICATION};
+        [_peripheral writeValue:[NSData dataWithBytes:startDFURequest length:sizeof(startDFURequest)]
+              forCharacteristic:_controlPointCharacteristic type:CBCharacteristicWriteWithResponse];
+        // write the file size
+        uint32_t fileSizeCollection[3] = { 0, 0, (uint32_t)_firmware.data.length };
+        [_peripheral writeValue:[NSData dataWithBytes:fileSizeCollection length:sizeof(fileSizeCollection)]
+              forCharacteristic:_packetCharacteristic type:CBCharacteristicWriteWithoutResponse];
+        _state = STATE_STARTING_UPDATE;
+    });
+}
+
+- (void)_sendInitPacket {
+    struct init_packet_t {
+        uint16_t deviceType, deviceRevision;
+        uint32_t applicationVersion;
+        uint16_t softDeviceCount, softDeviceVersion;
+        uint16_t crc;
+    } init_packet = { 0, 0, 0, 1, 0x0064, [_firmware crc] };
+    uint8_t initPacketStart[] = {INITIALIZE_DFU_PARAMETERS_REQUEST, START_INIT_PACKET};
+    [_peripheral writeValue:[NSData dataWithBytes:initPacketStart length:sizeof(initPacketStart)] forCharacteristic:_controlPointCharacteristic type:CBCharacteristicWriteWithResponse];
+    [_peripheral writeValue:[NSData dataWithBytes:&init_packet length:sizeof(init_packet)] forCharacteristic:_packetCharacteristic type:CBCharacteristicWriteWithoutResponse];
+    uint8_t initPacketEnd[] = {INITIALIZE_DFU_PARAMETERS_REQUEST, END_INIT_PACKET};
+    [_peripheral writeValue:[NSData dataWithBytes:initPacketEnd length:sizeof(initPacketEnd)] forCharacteristic:_controlPointCharacteristic type:CBCharacteristicWriteWithResponse];
+}
+
+- (void)_startSendingFirmware {
+    uint8_t value[] = {PACKET_RECEIPT_NOTIFICATION_REQUEST, PACKETS_NOTIFICATION_INTERVAL, 0};
+    [_peripheral writeValue:[NSData dataWithBytes:value length:sizeof(value)] forCharacteristic:_controlPointCharacteristic type:CBCharacteristicWriteWithResponse];
+    uint8_t value2 = RECEIVE_FIRMWARE_IMAGE_REQUEST;
+    [_peripheral writeValue:[NSData dataWithBytes:&value2 length:sizeof(value2)] forCharacteristic:_controlPointCharacteristic type:CBCharacteristicWriteWithResponse];
+    // TODO: only send PACKETS_NOTIFICATION_INTERVAL packets at a time
+    for( uint32_t i = 0; i < _firmware.data.length / 20; i++ ) {
+        [_peripheral writeValue:[_firmware.data subdataWithRange:NSMakeRange(i * 20, 20)] forCharacteristic:_packetCharacteristic type:CBCharacteristicWriteWithoutResponse];
+    }
+    if( (_firmware.data.length % 20) != 0 ) {
+        [_peripheral writeValue:[_firmware.data subdataWithRange:NSMakeRange(((uint32_t)(_firmware.data.length / 20)) * 20, _firmware.data.length % 20)] forCharacteristic:_packetCharacteristic type:CBCharacteristicWriteWithoutResponse];
+    }
 }
 
 - (void)_handleDeviceResponse:(uint8_t)responseCode requestedCode:(uint8_t)requestedCode responseStatus:(uint8_t)responseStatus {
@@ -181,7 +214,7 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
             case START_DFU_REQUEST:
                 switch (responseStatus) {
                     case OPERATION_SUCCESSFUL_RESPONSE:
-                        //[dfuRequests sendInitPacket:self.firmwareFileMetaData];
+                        [self _sendInitPacket];
                         break;
                     case OPERATION_NOT_SUPPORTED_RESPONSE:
                         //[dfuDelegate onError:errorMessage];
@@ -200,10 +233,11 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
                 //[self processValidateFirmwareResponseStatus];
                 break;
             case INITIALIZE_DFU_PARAMETERS_REQUEST:
-                //[self processInitPacketResponseStatus];
+                [self _startSendingFirmware];
                 break;
         }
     } else if( responseCode == PACKET_RECEIPT_NOTIFICATION_RESPONSE ) {
+        // should send the next PACKETS_NOTIFICATION_INTERVAL number of packets
     }
 }
 

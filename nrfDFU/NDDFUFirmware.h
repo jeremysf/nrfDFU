@@ -23,5 +23,6 @@ extern int const PACKET_SIZE;
 
 - (id)initWithApplicationURL:(NSURL*)url;
 - (BOOL)loadFileData:(NSError**)error;
+- (uint16_t)crc;
 
 @end

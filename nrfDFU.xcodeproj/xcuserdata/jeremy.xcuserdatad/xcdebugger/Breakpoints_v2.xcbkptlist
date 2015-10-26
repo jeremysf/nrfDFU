@@ -10,12 +10,28 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "nrfDFU/NDDFUDevice.m"
-            timestampString = "467499377.501104"
+            timestampString = "467535421.504303"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "136"
-            endingLineNumber = "136"
-            landmarkName = "-peripheral:didUpdateValueForCharacteristic:error:"
+            startingLineNumber = "198"
+            endingLineNumber = "198"
+            landmarkName = "-_startSendingFirmware"
+            landmarkType = "5">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "nrfDFU/NDDFUDevice.m"
+            timestampString = "467535464.824918"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "205"
+            endingLineNumber = "205"
+            landmarkName = "-_handleDeviceResponse:requestedCode:responseStatus:"
             landmarkType = "5">
          </BreakpointContent>
       </BreakpointProxy>

@@ -47,6 +47,8 @@ typedef enum {
     APPLICATION = 0x04
 } DfuFirmwareTypes;
 
+#define PACKETS_NOTIFICATION_INTERVAL 10
+
 typedef enum {
     STATE_IDLE,
     STATE_QUERYING_VERSION,
