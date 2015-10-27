@@ -1,5 +1,5 @@
 //
-//  NDDFUController.h
+//  NDDFUSampleController.h
 //  nrfDFU
 //
 //  Created by Jeremy Gordon on 10/13/15.
@@ -10,9 +10,7 @@
 #import <CoreBluetooth/CoreBluetooth.h>
 #import "NDDFUDevice.h"
 
-@class NDDFUController;
-
-@interface NDDFUController : NSObject<CBCentralManagerDelegate, NDDFUDeviceDelegate> {
+@interface NDDFUSampleController : NSObject<CBCentralManagerDelegate, NDDFUDeviceDelegate> {
 @private
     CBCentralManager* _centralManager;
     NSArray* _devices;

@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 #import <Foundation/Foundation.h>
-#import "NDDFUController.h"
+#import "NDDFUSampleController.h"
 #import "NDDFUDevice.h"
 
 int main(int argc, const char * argv[]) {
@@ -16,7 +16,7 @@ int main(int argc, const char * argv[]) {
         fprintf(stderr, "usage:\n\t%s <command>\ncommands:\n\tupdate <uuid> <application.hex>\n\tdiscover\n", argv[0]);
         return 1;
     }
-    NDDFUController* dfuController = [[NDDFUController alloc] init];
+    NDDFUSampleController* dfuController = [[NDDFUSampleController alloc] init];
     if( strcmp(argv[1], "update") == 0 ) {
         if( argc < 4 ) {
             fprintf(stderr, "error: missing uuid and application file name command line arguments.\n");
@@ -39,6 +39,7 @@ int main(int argc, const char * argv[]) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             for( int i = 0; i < dfuController.devices.count; i++ ) {
                 NDDFUDevice* device = dfuController.devices[i];
+                // only print out devices that have the DFU service (devices won't be able to be connected if they don't have the DFU service)
                 if( device.isConnected ) {
                     fprintf(stdout, "%s[%s]\n", device.peripheral.name.UTF8String, device.peripheral.identifier.UUIDString.UTF8String);
                 }

@@ -7,7 +7,6 @@
 //
 
 #import "NDDFUDevice.h"
-#import "NDDFUController.h"
 #import "NDDFUFirmware.h"
 #include <math.h>
 
@@ -31,10 +30,9 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
 @synthesize delegate = _delegate;
 @synthesize firmware = _firmware;
 
-- (instancetype)initWithPeripheral:(CBPeripheral*)peripheral RSSI:(float)RSSI controller:(NDDFUController *)controller {
+- (instancetype)initWithPeripheral:(CBPeripheral*)peripheral RSSI:(float)RSSI {
     self = [super init];
     if( self ) {
-        _controller = controller;
         _peripheral = peripheral;
         _peripheral.delegate = self;
         _controlPointCharacteristic = nil;
@@ -176,6 +174,7 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
 - (void)_restartIntoBootloader {
     // listen for packets from the control point
     [_peripheral setNotifyValue:YES forCharacteristic:_controlPointCharacteristic];
+    // TODO: seems lame to have to wait three seconds between notify and rebooting, but doesn't work reliably without it
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         if( self.delegate != nil ) {
             [self.delegate deviceUpdateStatus:self status:@"restarting into bootloader"];
@@ -212,7 +211,7 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
         uint16_t crc;
     }
     // TODO: don't hardcode the version strings here!
-    init_packet = { 0, 0, 0, 1, 0x0064, [_firmware crc] };    
+    init_packet = { 0, 0, 0, 1, 0x0064, [_firmware crc] };
     uint8_t initPacketStart[] = {INITIALIZE_DFU_PARAMETERS_REQUEST, START_INIT_PACKET};
     [_peripheral writeValue:[NSData dataWithBytes:initPacketStart length:sizeof(initPacketStart)] forCharacteristic:_controlPointCharacteristic type:CBCharacteristicWriteWithResponse];
     [_peripheral writeValue:[NSData dataWithBytes:&init_packet length:sizeof(init_packet)] forCharacteristic:_packetCharacteristic type:CBCharacteristicWriteWithoutResponse];
@@ -311,6 +310,7 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
 }
 
 - (void)startUpdateWithApplication:(NDDFUFirmware*)firmware {
+    _state = STATE_IDLE;
     _firmware = firmware;
     // query the version, if the app is running and not the bootloader, this will result
     //  in entering the bootloader, if we're already in the bootloader, this will result in the

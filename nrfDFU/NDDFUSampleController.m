@@ -1,26 +1,26 @@
 //
-//  NDDFUController.m
+//  NDDFUSampleController.m
 //  nrfDFU
 //
 //  Created by Jeremy Gordon on 10/13/15.
 //  Copyright © 2015 Superstructure. All rights reserved.
 //
 
-#import "NDDFUController.h"
+#import "NDDFUSampleController.h"
 #import "NDDFUDevice.h"
 #import "NDDFUFirmware.h"
 
 NSString *const kDeviceDiscoveryNotification = @"kDeviceDiscoveryNotification";
 NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
 
-@interface NDDFUController () {
+@interface NDDFUSampleController () {
     
 }
 
 @end
 
 
-@implementation NDDFUController
+@implementation NDDFUSampleController
 
 @synthesize devices = _devices;
 @synthesize centralManager = _centralManager;
@@ -43,6 +43,8 @@ NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
 }
 
 - (void)deviceConnected:(NDDFUDevice *)device {
+    // if we aren't in the "discovery" command line mode, the first time we connect to a device,
+    //  we'll kick off the update process
     if( _deviceToUpdate != nil && _deviceToUpdateUUID != nil ) {
         _deviceToUpdateUUID = nil;
         [_deviceToUpdate startUpdateWithApplication:_firmware];
@@ -74,12 +76,15 @@ NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
 
 - (void)updateWithApplication:(NSString *)applicationFileName uuid:(NSString *)uuid completed:(void (^)(NSError* error))completed {
     NSError* error;
+    // load the firmware, only .bin files are supported
     _firmware = [[NDDFUFirmware alloc] initWithApplicationURL:[NSURL fileURLWithPath:applicationFileName]];
     if( ![_firmware loadFileData:&error] ) {
         completed(error);
         return;
     }
+    // remember the block the user wants called back
     _updateCompleteHandler = completed;
+    // remember the UUID of the device that the user is hoping we'll find
     _deviceToUpdateUUID = uuid;
     // start discovering devices
     [self initCentralManager];
@@ -130,7 +135,7 @@ NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
 
 - (NDDFUDevice*)addDeviceForPeripheral:(CBPeripheral*)peripheral RSSI:(float)RSSI {
     [self willChangeValueForKey:@"devices"];
-    NDDFUDevice* device = [[NDDFUDevice alloc] initWithPeripheral:peripheral RSSI:RSSI controller:self];
+    NDDFUDevice* device = [[NDDFUDevice alloc] initWithPeripheral:peripheral RSSI:RSSI];
     device.delegate = self;
     _devices = [_devices arrayByAddingObject:device];
     [self didChangeValueForKey:@"devices"];
@@ -139,7 +144,9 @@ NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
 
 - (void)centralManager:(CBCentralManager *)central didConnectPeripheral:(CBPeripheral *)peripheral {
     NDDFUDevice* device = [self deviceForPeripheral:peripheral];
-    [device onPeripheralConnected:central];
+    if( !device.isConnected ) {
+        [device onPeripheralConnected:central];
+    }
 }
 
 - (void)centralManager:(CBCentralManager *)central didDisconnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
@@ -164,13 +171,17 @@ NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
     }
     // otherwise add this device
     NDDFUDevice* device = [self addDeviceForPeripheral:peripheral RSSI:[RSSI floatValue]];
+    // if we haven't yet found the device the user asked for
     if( _deviceToUpdateUUID != nil ) {
+        // check and see if this is it
         if( [[device.peripheral.identifier.UUIDString uppercaseString] isEqualToString:[_deviceToUpdateUUID uppercaseString]] ) {
+            // remember it, and then connect to it
             _deviceToUpdate = device;
             [_centralManager connectPeripheral:device.peripheral
                                        options:nil];
         }
     } else {
+        // otherwise we're probably running with the "discover" command line option, so just connect to the device
         [_centralManager connectPeripheral:device.peripheral
                                    options:nil];
     }

@@ -58,7 +58,6 @@ typedef enum {
     STATE_ERROR
 } DfuState;
 
-@class NDDFUController;
 @class NDDFUFirmware;
 @class NDDFUDevice;
 
@@ -74,7 +73,6 @@ typedef enum {
 
 @interface NDDFUDevice : NSObject<CBPeripheralDelegate> {
 @private
-    NDDFUController* _controller;
     CBPeripheral* _peripheral;
     float _RSSI;
     CBService* _service;
@@ -96,7 +94,7 @@ typedef enum {
 @property (readonly) NSUInteger versionMinor;
 @property (readonly) NDDFUFirmware* firmware;
 
-- (instancetype)initWithPeripheral:(CBPeripheral*)peripheral RSSI:(float)RSSI controller:(NDDFUController*)controller;
+- (instancetype)initWithPeripheral:(CBPeripheral*)peripheral RSSI:(float)RSSI;
 - (void)startUpdateWithApplication:(NDDFUFirmware*)firmware;
 - (void)onPeripheralConnected:(CBCentralManager*)manager;
 - (void)onPeripheralDisconnected:(CBCentralManager*)manager;

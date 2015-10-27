@@ -11,9 +11,9 @@
 		3FA1454E1BCCDC0100BEA19A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3FA1454D1BCCDC0100BEA19A /* Foundation.framework */; };
 		3FA145501BCCDC0500BEA19A /* CoreBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3FA1454F1BCCDC0500BEA19A /* CoreBluetooth.framework */; };
 		3FA145AC1BCD87D800BEA19A /* libz.1.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 3FA145AB1BCD87D800BEA19A /* libz.1.tbd */; };
-		3FA145B11BCD8A2200BEA19A /* NDDFUController.m in Sources */ = {isa = PBXBuildFile; fileRef = 3FA145B01BCD8A2200BEA19A /* NDDFUController.m */; settings = {ASSET_TAGS = (); }; };
-		3FA145B41BCDC28900BEA19A /* NDDFUDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 3FA145B31BCDC28900BEA19A /* NDDFUDevice.m */; settings = {ASSET_TAGS = (); }; };
-		3FA5671B1BD1C54B00A45C9A /* NDDFUFirmware.m in Sources */ = {isa = PBXBuildFile; fileRef = 3FA5671A1BD1C54B00A45C9A /* NDDFUFirmware.m */; settings = {ASSET_TAGS = (); }; };
+		3FA145B11BCD8A2200BEA19A /* NDDFUSampleController.m in Sources */ = {isa = PBXBuildFile; fileRef = 3FA145B01BCD8A2200BEA19A /* NDDFUSampleController.m */; };
+		3FA145B41BCDC28900BEA19A /* NDDFUDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 3FA145B31BCDC28900BEA19A /* NDDFUDevice.m */; };
+		3FA5671B1BD1C54B00A45C9A /* NDDFUFirmware.m in Sources */ = {isa = PBXBuildFile; fileRef = 3FA5671A1BD1C54B00A45C9A /* NDDFUFirmware.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -36,8 +36,8 @@
 		3FA145A61BCD864300BEA19A /* libbz2.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libbz2.tbd; path = usr/lib/libbz2.tbd; sourceTree = SDKROOT; };
 		3FA145A91BCD87C300BEA19A /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
 		3FA145AB1BCD87D800BEA19A /* libz.1.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.1.tbd; path = usr/lib/libz.1.tbd; sourceTree = SDKROOT; };
-		3FA145AF1BCD8A2200BEA19A /* NDDFUController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NDDFUController.h; sourceTree = "<group>"; };
-		3FA145B01BCD8A2200BEA19A /* NDDFUController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NDDFUController.m; sourceTree = "<group>"; };
+		3FA145AF1BCD8A2200BEA19A /* NDDFUSampleController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NDDFUSampleController.h; sourceTree = "<group>"; };
+		3FA145B01BCD8A2200BEA19A /* NDDFUSampleController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NDDFUSampleController.m; sourceTree = "<group>"; };
 		3FA145B21BCDC28900BEA19A /* NDDFUDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NDDFUDevice.h; sourceTree = "<group>"; };
 		3FA145B31BCDC28900BEA19A /* NDDFUDevice.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NDDFUDevice.m; sourceTree = "<group>"; };
 		3FA567191BD1C54B00A45C9A /* NDDFUFirmware.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NDDFUFirmware.h; sourceTree = "<group>"; };
@@ -79,8 +79,8 @@
 			isa = PBXGroup;
 			children = (
 				3FA145461BCCDBF000BEA19A /* main.m */,
-				3FA145AF1BCD8A2200BEA19A /* NDDFUController.h */,
-				3FA145B01BCD8A2200BEA19A /* NDDFUController.m */,
+				3FA145AF1BCD8A2200BEA19A /* NDDFUSampleController.h */,
+				3FA145B01BCD8A2200BEA19A /* NDDFUSampleController.m */,
 				3FA145B21BCDC28900BEA19A /* NDDFUDevice.h */,
 				3FA145B31BCDC28900BEA19A /* NDDFUDevice.m */,
 				3FA567191BD1C54B00A45C9A /* NDDFUFirmware.h */,
@@ -158,7 +158,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3FA5671B1BD1C54B00A45C9A /* NDDFUFirmware.m in Sources */,
-				3FA145B11BCD8A2200BEA19A /* NDDFUController.m in Sources */,
+				3FA145B11BCD8A2200BEA19A /* NDDFUSampleController.m in Sources */,
 				3FA145B41BCDC28900BEA19A /* NDDFUDevice.m in Sources */,
 				3FA145471BCCDBF000BEA19A /* main.m in Sources */,
 			);
