@@ -9,6 +9,7 @@
 #import "NDDFUDevice.h"
 #import "NDDFUController.h"
 #import "NDDFUFirmware.h"
+#include <math.h>
 
 NSString *const kDeviceDFUServiceUUID = @"00001530-1212-EFDE-1523-785FEABCD123";
 NSString *const kDeviceControlPointCharacteristicUUID = @"00001531-1212-EFDE-1523-785FEABCD123";
@@ -28,6 +29,7 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
 @synthesize versionMajor = _versionMajor;
 @synthesize versionMinor = _versionMinor;
 @synthesize delegate = _delegate;
+@synthesize firmware = _firmware;
 
 - (instancetype)initWithPeripheral:(CBPeripheral*)peripheral RSSI:(float)RSSI controller:(NDDFUController *)controller {
     self = [super init];
@@ -59,14 +61,18 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
 }
 
 - (void)onPeripheralConnected:(CBCentralManager*)manager {
-    fprintf(stdout, "connecting...\n");
+    if( self.delegate != nil ) {
+        [self.delegate deviceUpdateStatus:self status:@"connecting"];
+    }
     if( _service == nil || _controlPointCharacteristic == nil || _packetCharacteristic == nil || _versionCharacteristic == nil ) {
-        [_peripheral discoverServices:[NSArray arrayWithObject:[CBUUID UUIDWithString:kDeviceDFUServiceUUID]]];
+        [_peripheral discoverServices:nil];//[NSArray arrayWithObject:[CBUUID UUIDWithString:kDeviceDFUServiceUUID]]];
     }
 }
 
 - (void)onPeripheralDisconnected:(CBCentralManager*)manager {
-    fprintf(stdout, "disconnecting...\n");
+    if( self.delegate != nil ) {
+        [self.delegate deviceUpdateStatus:self status:@"disconnecting"];
+    }
     _service = nil;
     _controlPointCharacteristic = nil;
     _packetCharacteristic = nil;
@@ -82,12 +88,22 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
 }
 
 - (void)peripheral:(CBPeripheral *)peripheral didDiscoverServices:(NSError *)error {
-    _service = _peripheral.services[0];
-    [_peripheral discoverCharacteristics:[NSArray arrayWithObjects:
-                                          [CBUUID UUIDWithString:kDeviceControlPointCharacteristicUUID],
-                                          [CBUUID UUIDWithString:kDevicePacketCharacteristicUUID],
-                                          [CBUUID UUIDWithString:kDeviceVersionCharacteristicUUID], nil]
-                              forService:_service];
+    if( error ) {
+        [self.delegate deviceError:self error:error];
+        return;
+    }
+    for( NSUInteger i = 0; i < _peripheral.services.count; i++ ) {
+        CBService* service = _peripheral.services[i];
+        if( [service.UUID isEqualTo:[CBUUID UUIDWithString:kDeviceDFUServiceUUID]] ) {
+            _service = service;
+            [_peripheral discoverCharacteristics:[NSArray arrayWithObjects:
+                                                  [CBUUID UUIDWithString:kDeviceControlPointCharacteristicUUID],
+                                                  [CBUUID UUIDWithString:kDevicePacketCharacteristicUUID],
+                                                  [CBUUID UUIDWithString:kDeviceVersionCharacteristicUUID], nil]
+                                      forService:_service];
+            break;
+        }
+    }
 }
 
 - (void)peripheral:(CBPeripheral *)peripheral didDiscoverCharacteristicsForService:(CBService *)service error:(NSError *)error {
@@ -108,6 +124,12 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
             [self _queryVersion];
         } else if( _state != STATE_IDLE ){
             // we're reconnecting during the middle of the update process
+            if( self.delegate != nil ) {
+                [self.delegate deviceError:self
+                                     error:[NSError errorWithDomain:@"DFU"
+                                                               code:0
+                                                           userInfo:@{NSLocalizedDescriptionKey: @"Lost connection while updating."}]];
+            }
         } else {
             if( _delegate != nil ) {
                 [_delegate deviceConnected:self];
@@ -155,7 +177,9 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
     // listen for packets from the control point
     [_peripheral setNotifyValue:YES forCharacteristic:_controlPointCharacteristic];
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        fprintf(stdout, "restarting into bootloader...\n");
+        if( self.delegate != nil ) {
+            [self.delegate deviceUpdateStatus:self status:@"restarting into bootloader"];
+        }
         // basically restart the device into DFU mode
         uint8_t startDFURequest[] = {START_DFU_REQUEST, APPLICATION };
         [_peripheral writeValue:[NSData dataWithBytes:startDFURequest length:sizeof(startDFURequest)]
@@ -186,7 +210,9 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
         uint32_t applicationVersion;
         uint16_t softDeviceCount, softDeviceVersion;
         uint16_t crc;
-    } init_packet = { 0, 0, 0, 1, 0x0064, [_firmware crc] };
+    }
+    // TODO: don't hardcode the version strings here!
+    init_packet = { 0, 0, 0, 1, 0x0064, [_firmware crc] };    
     uint8_t initPacketStart[] = {INITIALIZE_DFU_PARAMETERS_REQUEST, START_INIT_PACKET};
     [_peripheral writeValue:[NSData dataWithBytes:initPacketStart length:sizeof(initPacketStart)] forCharacteristic:_controlPointCharacteristic type:CBCharacteristicWriteWithResponse];
     [_peripheral writeValue:[NSData dataWithBytes:&init_packet length:sizeof(init_packet)] forCharacteristic:_packetCharacteristic type:CBCharacteristicWriteWithoutResponse];
@@ -199,13 +225,29 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
     [_peripheral writeValue:[NSData dataWithBytes:value length:sizeof(value)] forCharacteristic:_controlPointCharacteristic type:CBCharacteristicWriteWithResponse];
     uint8_t value2 = RECEIVE_FIRMWARE_IMAGE_REQUEST;
     [_peripheral writeValue:[NSData dataWithBytes:&value2 length:sizeof(value2)] forCharacteristic:_controlPointCharacteristic type:CBCharacteristicWriteWithResponse];
-    // TODO: only send PACKETS_NOTIFICATION_INTERVAL packets at a time
-    for( uint32_t i = 0; i < _firmware.data.length / 20; i++ ) {
-        [_peripheral writeValue:[_firmware.data subdataWithRange:NSMakeRange(i * 20, 20)] forCharacteristic:_packetCharacteristic type:CBCharacteristicWriteWithoutResponse];
+    _firmwareBytesSent = 0;
+    [self _sendFirmwarePackets];
+}
+
+- (void)_sendFirmwarePackets {
+    if( self.delegate != nil ) {
+        [self.delegate deviceUpdateProgress:self progress:((float)_firmwareBytesSent) / _firmware.data.length];
     }
-    if( (_firmware.data.length % 20) != 0 ) {
-        [_peripheral writeValue:[_firmware.data subdataWithRange:NSMakeRange(((uint32_t)(_firmware.data.length / 20)) * 20, _firmware.data.length % 20)] forCharacteristic:_packetCharacteristic type:CBCharacteristicWriteWithoutResponse];
+    for( uint32_t j = 0; _firmwareBytesSent < _firmware.data.length && j < PACKETS_NOTIFICATION_INTERVAL; j++ ) {
+        uint32_t bytesToSend = fmin(PACKET_SIZE, ((uint32_t)_firmware.data.length) - _firmwareBytesSent);
+        [_peripheral writeValue:[_firmware.data subdataWithRange:NSMakeRange(_firmwareBytesSent, bytesToSend)] forCharacteristic:_packetCharacteristic type:CBCharacteristicWriteWithoutResponse];
+        _firmwareBytesSent += bytesToSend;
     }
+}
+
+- (void)_sendValidateFirmwareRequest {
+    uint8_t value = VALIDATE_FIRMWARE_REQUEST;
+    [_peripheral writeValue:[NSData dataWithBytes:&value length:sizeof(value)] forCharacteristic:_controlPointCharacteristic type:CBCharacteristicWriteWithResponse];
+}
+
+- (void)_sendActivateAndReset {
+    uint8_t value = ACTIVATE_AND_RESET_REQUEST;
+    [_peripheral writeValue:[NSData dataWithBytes:&value length:sizeof(value)] forCharacteristic:_controlPointCharacteristic type:CBCharacteristicWriteWithResponse];
 }
 
 - (void)_handleDeviceResponse:(uint8_t)responseCode requestedCode:(uint8_t)requestedCode responseStatus:(uint8_t)responseStatus {
@@ -216,28 +258,55 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
                     case OPERATION_SUCCESSFUL_RESPONSE:
                         [self _sendInitPacket];
                         break;
-                    case OPERATION_NOT_SUPPORTED_RESPONSE:
-                        //[dfuDelegate onError:errorMessage];
-                        //[dfuRequests resetSystem];
-                        break;
                     default:
-                        //[dfuDelegate onError:errorMessage];
-                        //[dfuRequests resetSystem];
                         break;
                 }
                 break;
             case RECEIVE_FIRMWARE_IMAGE_REQUEST:
-                //[self processReceiveFirmwareResponseStatus];
+                switch(responseStatus) {
+                    case OPERATION_SUCCESSFUL_RESPONSE:
+                        [self _sendValidateFirmwareRequest];
+                        break;
+                    default:
+                        if( self.delegate != nil ) {
+                            [self.delegate deviceError:self
+                                                 error:[NSError errorWithDomain:@"DFU"
+                                                                           code:0
+                                                                       userInfo:@{NSLocalizedDescriptionKey: @"Error sending firmware."}]];
+                        }
+                        break;
+                }
                 break;
             case VALIDATE_FIRMWARE_REQUEST:
-                //[self processValidateFirmwareResponseStatus];
+                switch(responseStatus) {
+                    case OPERATION_SUCCESSFUL_RESPONSE:
+                        if( self.delegate != nil ) {
+                            [self.delegate deviceUpdateProgress:self progress:1];
+                        }
+                        if( self.delegate != nil ) {
+                            [self.delegate deviceUpdateStatus:self status:@"activating and restarting"];
+                        }
+                        [self _sendActivateAndReset];
+                        if( self.delegate != nil ) {
+                            [self.delegate deviceUpdated:self];
+                        }
+                        break;
+                    default:
+                        if( self.delegate != nil ) {
+                            [self.delegate deviceError:self
+                                                 error:[NSError errorWithDomain:@"DFU"
+                                                                           code:0
+                                                                       userInfo:@{NSLocalizedDescriptionKey: @"Firmware validation failed."}]];
+                        }
+                        break;
+                }
                 break;
             case INITIALIZE_DFU_PARAMETERS_REQUEST:
                 [self _startSendingFirmware];
                 break;
         }
     } else if( responseCode == PACKET_RECEIPT_NOTIFICATION_RESPONSE ) {
-        // should send the next PACKETS_NOTIFICATION_INTERVAL number of packets
+        [self _sendFirmwarePackets];
     }
 }
 

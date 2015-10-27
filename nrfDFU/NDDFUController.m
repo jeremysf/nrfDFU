@@ -63,6 +63,15 @@ NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
     }
 }
 
+- (void)deviceUpdateStatus:(NDDFUDevice*)device status:(NSString*)status {
+    fprintf(stdout, "%s\n", [status UTF8String]);
+}
+
+- (void)deviceUpdateProgress:(NDDFUDevice*)device progress:(float)progress {
+    fprintf(stdout, "%d/%d\n", (uint32_t)(progress * device.firmware.data.length), (uint32_t)device.firmware.data.length);
+}
+
+
 - (void)updateWithApplication:(NSString *)applicationFileName uuid:(NSString *)uuid completed:(void (^)(NSError* error))completed {
     NSError* error;
     _firmware = [[NDDFUFirmware alloc] initWithApplicationURL:[NSURL fileURLWithPath:applicationFileName]];

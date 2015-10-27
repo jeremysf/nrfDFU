@@ -48,6 +48,7 @@ typedef enum {
 } DfuFirmwareTypes;
 
 #define PACKETS_NOTIFICATION_INTERVAL 10
+#define PACKET_SIZE 20
 
 typedef enum {
     STATE_IDLE,
@@ -64,6 +65,8 @@ typedef enum {
 @protocol NDDFUDeviceDelegate
 
 - (void)deviceConnected:(NDDFUDevice*)device;
+- (void)deviceUpdateStatus:(NDDFUDevice*)device status:(NSString*)status;
+- (void)deviceUpdateProgress:(NDDFUDevice*)device progress:(float)progress;
 - (void)deviceError:(NDDFUDevice*)device error:(NSError*)error;
 - (void)deviceUpdated:(NDDFUDevice*)device;
 
@@ -82,6 +85,7 @@ typedef enum {
     NSUInteger _versionMinor;
     NDDFUFirmware* _firmware;
     DfuState _state;
+    uint32_t _firmwareBytesSent;
     id<NDDFUDeviceDelegate> _delegate;
 }
 
@@ -90,6 +94,7 @@ typedef enum {
 @property (nonatomic) float RSSI;
 @property (readonly) NSUInteger versionMajor;
 @property (readonly) NSUInteger versionMinor;
+@property (readonly) NDDFUFirmware* firmware;
 
 - (instancetype)initWithPeripheral:(CBPeripheral*)peripheral RSSI:(float)RSSI controller:(NDDFUController*)controller;
 - (void)startUpdateWithApplication:(NDDFUFirmware*)firmware;

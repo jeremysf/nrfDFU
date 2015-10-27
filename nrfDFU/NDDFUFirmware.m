@@ -8,8 +8,6 @@
 
 #import "NDDFUFirmware.h"
 
-int const PACKET_SIZE = 20;
-
 @implementation NDDFUFirmware
 
 @synthesize data = _data;
@@ -38,12 +36,6 @@ int const PACKET_SIZE = 20;
                                  userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Unable to read contents of '%@'.", [_url absoluteString]]}];
         return NO;
     }
-    _numberOfPackets = ceil((double)_data.length / (double)PACKET_SIZE);
-    _bytesInLastPacket = (_data.length % PACKET_SIZE);
-    if( _bytesInLastPacket == 0 ) {
-        _bytesInLastPacket = PACKET_SIZE;
-    }
-    _writingPacketNumber = 0;
     return YES;
 }
 

@@ -8,15 +8,10 @@
 
 #import <Foundation/Foundation.h>
 
-extern int const PACKET_SIZE;
-
 @interface NDDFUFirmware : NSObject {
 @private
     NSURL* _url;
     NSData* _data;
-    int _numberOfPackets;
-    int _bytesInLastPacket;
-    int _writingPacketNumber;
 }
 
 @property (readonly, nonatomic) NSData* data;

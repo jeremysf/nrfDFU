@@ -30,6 +30,7 @@ int main(int argc, const char * argv[]) {
                                            fprintf(stderr, "error: %s\n", [[error localizedDescription] UTF8String]);
                                            exit(1);
                                        } else {
+                                           fprintf(stderr, "success!\n");
                                            exit(0);
                                        }
                                    }];
