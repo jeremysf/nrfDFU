@@ -13,7 +13,7 @@
 
 int main(int argc, const char * argv[]) {
     if( argc < 2 ) {
-        fprintf(stderr, "usage:\n\t%s <command>\ncommands:\n\tupdate <uuid> <application.hex>\n\tdiscover\n", argv[0]);
+        fprintf(stderr, "usage:\n\t%s <command>\ncommands:\n\tupdate <uuid> <application.bin>\n\tdiscover\n", argv[0]);
         return 1;
     }
     NDDFUSampleController* dfuController = [[NDDFUSampleController alloc] init];
