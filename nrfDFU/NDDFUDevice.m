@@ -14,6 +14,9 @@ NSString *const kDeviceDFUServiceUUID = @"00001530-1212-EFDE-1523-785FEABCD123";
 NSString *const kDeviceControlPointCharacteristicUUID = @"00001531-1212-EFDE-1523-785FEABCD123";
 NSString *const kDevicePacketCharacteristicUUID = @"00001532-1212-EFDE-1523-785FEABCD123";
 NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785FEABCD123";
+NSString *const kSamd21ControlPointCharacteristicUUID = @"1100";
+NSString *const kSamd21PacketCharacteristicUUID = @"1101";
+NSString *const kSamd21ServiceUUID = @"88CB59C8-2293-4EE1-8F33-01E7904DB115";
 
 @interface NDDFUDevice () {
     void (^_versionCallback)(uint8_t major, uint8_t minor, NSError *error);
@@ -38,6 +41,9 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
         _controlPointCharacteristic = nil;
         _packetCharacteristic = nil;
         _versionCharacteristic = nil;
+        _samd21ControlPointCharacteristic = nil;
+        _samd21PacketCharacteristic = nil;
+        _updatingSamd21 = false;
         _service = nil;
         _RSSI = RSSI;
         _versionMajor = 0;
@@ -72,9 +78,13 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
         [self.delegate deviceUpdateStatus:self status:@"disconnecting"];
     }
     _service = nil;
+    _samd21Service = nil;
     _controlPointCharacteristic = nil;
     _packetCharacteristic = nil;
     _versionCharacteristic = nil;
+    _samd21ControlPointCharacteristic = nil;
+    _samd21PacketCharacteristic = nil;
+    _updatingSamd21 = false;
     _versionMajor = 0;
     _versionMinor = 0;
     // potentially attempt to reconnect
@@ -99,7 +109,12 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
                                                   [CBUUID UUIDWithString:kDevicePacketCharacteristicUUID],
                                                   [CBUUID UUIDWithString:kDeviceVersionCharacteristicUUID], nil]
                                       forService:_service];
-            break;
+        } else if( [service.UUID isEqualTo:[CBUUID UUIDWithString:kSamd21ServiceUUID]] ) {
+            _samd21Service = service;
+            [_peripheral discoverCharacteristics:[NSArray arrayWithObjects:
+                                                  [CBUUID UUIDWithString:kSamd21ControlPointCharacteristicUUID],
+                                                  [CBUUID UUIDWithString:kSamd21PacketCharacteristicUUID], nil]
+                                      forService:_samd21Service];
         }
     }
 }
@@ -113,9 +128,14 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
             _packetCharacteristic = characteristic;
         } else if( [characteristic.UUID.UUIDString isEqualToString:kDeviceVersionCharacteristicUUID] ) {
             _versionCharacteristic = characteristic;
+        } else if( [characteristic.UUID.UUIDString isEqualToString:kSamd21ControlPointCharacteristicUUID] ) {
+            _samd21ControlPointCharacteristic = characteristic;
+        } else if( [characteristic.UUID.UUIDString isEqualToString:kSamd21PacketCharacteristicUUID] ) {
+            _samd21PacketCharacteristic = characteristic;
         }
     }
-    if( _controlPointCharacteristic != nil && _packetCharacteristic != nil && _versionCharacteristic != nil ) {
+    if( (_controlPointCharacteristic != nil && _packetCharacteristic != nil && _versionCharacteristic != nil) ||
+       (_samd21ControlPointCharacteristic != nil && _samd21PacketCharacteristic != nil)) {
         if( _state == STATE_ENTERING_BOOTLOADER ) {
             // after regaining connection, query the version to see
             //  if we successfully entered the bootloader
@@ -134,6 +154,21 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
             }
         }
     }
+}
+
+- (void)_sendSamd21FirmwarePackets {
+    if( self.delegate != nil ) {
+        [self.delegate deviceUpdateProgress:self progress:((float)_firmwareBytesSent) / _firmware.data.length];
+    }
+    for( uint32_t j = 0; _firmwareBytesSent < _firmware.data.length && j < PACKETS_NOTIFICATION_INTERVAL; j++ ) {
+        uint32_t bytesToSend = fmin(PACKET_SIZE, ((uint32_t)_firmware.data.length) - _firmwareBytesSent);
+        NSData* dataToSend = [_firmware.data subdataWithRange:NSMakeRange(_firmwareBytesSent, bytesToSend)];
+        [_peripheral writeValue:dataToSend forCharacteristic:_samd21PacketCharacteristic type:CBCharacteristicWriteWithoutResponse];
+        _firmwareBytesSent += bytesToSend;
+    }
+}
+
+- (void)peripheral:(CBPeripheral *)peripheral didWriteValueForCharacteristic:(CBCharacteristic *)characteristic error:(NSError *)error {
 }
 
 - (void)peripheral:(CBPeripheral *)peripheral didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic error:(NSError *)error {
@@ -157,11 +192,20 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
             //  we'll start the DFU process
             [self _startDFURequest];
         }
-    } else {
+    } else if( [characteristic.UUID isEqual:[CBUUID UUIDWithString:kDeviceControlPointCharacteristicUUID]]){
         const uint8_t* response = [characteristic.value bytes];
         [self _handleDeviceResponse:response[0]
                       requestedCode:response[1]
                      responseStatus:response[2]];
+    } else if( [characteristic.UUID isEqual:[CBUUID UUIDWithString:kSamd21ControlPointCharacteristicUUID]]) {
+        const uint8_t response = *(uint8_t*)[characteristic.value bytes];
+        if( response == 2 ) {
+            if( self.delegate != nil ) {
+                [self.delegate deviceUpdated:self];
+            }
+        } else if( response == 1 ) {
+            [self _sendSamd21FirmwarePackets];
+        }
     }
 }
 
@@ -317,5 +361,16 @@ NSString *const kDeviceVersionCharacteristicUUID = @"00001534-1212-EFDE-1523-785
     //  DFU process starting
     [self _queryVersion];
 }
+
+- (void)startSamd21UpdateWithApplication:(NDDFUFirmware*)firmware {
+    _firmware = firmware;
+    uint32_t length = (uint32_t)_firmware.data.length;
+    // listen for packets from the control point
+    [_peripheral setNotifyValue:YES forCharacteristic:_samd21ControlPointCharacteristic];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(NSEC_PER_SEC / 2)), dispatch_get_main_queue(), ^{
+        [_peripheral writeValue:[NSData dataWithBytes:&length length:sizeof(length)] forCharacteristic:_samd21ControlPointCharacteristic type:CBCharacteristicWriteWithResponse];
+    });
+}
+
 
 @end

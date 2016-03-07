@@ -17,6 +17,7 @@
     NDDFUFirmware* _firmware;
     NDDFUDevice* _deviceToUpdate;
     NSString* _deviceToUpdateUUID;
+    NSString* _samd21ToUpdateUUID;
     void (^_updateCompleteHandler)(NSError* error);
 }
 
@@ -24,6 +25,7 @@
 @property (readonly) CBCentralManager* centralManager;
 
 - (void)updateWithApplication:(NSString*)applicationFileName uuid:(NSString*)uuid completed:(void (^)(NSError* error))completed;
+- (void)updateSamd21WithApplication:(NSString*)applicationFileName uuid:(NSString*)uuid completed:(void (^)(NSError* error))completed;
 - (void)discover;
 
 @end

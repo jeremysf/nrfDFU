@@ -63,15 +63,15 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "update"
+            argument = "samd21"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "37906741-4047-40CB-A422-52B92C836B90"
+            argument = "0837616B-81EA-4082-BB62-E51C6E07AC38"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "/Users/jeremy/Development/workspace/nRF51_SDK_9/examples/ble_peripheral/ble_app_hrs/pca10028/s110_with_dfu/armgcc/_build/nrf51422_xxac_s110.bin"
+            argument = "/Users/jeremy/Development/Bluelight/firmware/samd21/build/bluelight_samd21.bin"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

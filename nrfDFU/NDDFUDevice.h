@@ -76,14 +76,18 @@ typedef enum {
     CBPeripheral* _peripheral;
     float _RSSI;
     CBService* _service;
+    CBService* _samd21Service;
     CBCharacteristic* _controlPointCharacteristic;
     CBCharacteristic* _packetCharacteristic;
     CBCharacteristic* _versionCharacteristic;
+    CBCharacteristic* _samd21ControlPointCharacteristic;
+    CBCharacteristic* _samd21PacketCharacteristic;
     NSUInteger _versionMajor;
     NSUInteger _versionMinor;
     NDDFUFirmware* _firmware;
     DfuState _state;
     uint32_t _firmwareBytesSent;
+    bool _updatingSamd21;
     id<NDDFUDeviceDelegate> _delegate;
 }
 
@@ -96,6 +100,7 @@ typedef enum {
 
 - (instancetype)initWithPeripheral:(CBPeripheral*)peripheral RSSI:(float)RSSI;
 - (void)startUpdateWithApplication:(NDDFUFirmware*)firmware;
+- (void)startSamd21UpdateWithApplication:(NDDFUFirmware*)firmware;
 - (void)onPeripheralConnected:(CBCentralManager*)manager;
 - (void)onPeripheralDisconnected:(CBCentralManager*)manager;
 - (BOOL)isConnected;

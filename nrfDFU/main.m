@@ -13,7 +13,7 @@
 
 int main(int argc, const char * argv[]) {
     if( argc < 2 ) {
-        fprintf(stderr, "usage:\n\t%s <command>\ncommands:\n\tupdate <uuid> <application.bin>\n\tdiscover\n", argv[0]);
+        fprintf(stderr, "usage:\n\t%s <command>\ncommands:\n\tupdate <uuid> <application.bin>\n\tsamd21 <uuid> <application.bin>\n\tdiscover\n", argv[0]);
         return 1;
     }
     NDDFUSampleController* dfuController = [[NDDFUSampleController alloc] init];
@@ -34,6 +34,23 @@ int main(int argc, const char * argv[]) {
                                            exit(0);
                                        }
                                    }];
+    } else if( strcmp(argv[1], "samd21") == 0 ) {
+            if( argc < 4 ) {
+                fprintf(stderr, "error: missing uuid and application file name command line arguments.\n");
+                return 1;
+            }
+            NSString* deviceUUID = [NSString stringWithUTF8String:argv[2]];
+            NSString* applicationFileName = [NSString stringWithUTF8String:argv[3]];
+            [dfuController updateSamd21WithApplication:applicationFileName uuid:deviceUUID
+                                       completed:^(NSError *error) {
+                                           if( error != nil ) {
+                                               fprintf(stderr, "error: %s\n", [[error localizedDescription] UTF8String]);
+                                               exit(1);
+                                           } else {
+                                               fprintf(stderr, "success!\n");
+                                               exit(0);
+                                           }
+                                       }];
     } else if( strcmp(argv[1], "discover")  == 0 ) {
         // wait a little bit
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
