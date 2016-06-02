@@ -64,11 +64,23 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "samd21"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "update"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "0837616B-81EA-4082-BB62-E51C6E07AC38"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "8A8D96D1-5CC5-4121-8D06-CC45BEF96637"
             isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "/Users/jeremy/Development/Bluelight/firmware/nRF/_build/nrf51422_xxac_s110.bin"
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "/Users/jeremy/Development/Bluelight/firmware/samd21/build/bluelight_samd21.bin"

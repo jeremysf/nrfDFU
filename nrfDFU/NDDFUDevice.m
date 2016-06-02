@@ -100,6 +100,8 @@ NSString *const kSamd21ServiceUUID = @"88CB59C8-2293-4EE1-8F33-01E7904DB115";
         [self.delegate deviceError:self error:error];
         return;
     }
+    _service = NULL;
+    _samd21Service = NULL;
     for( NSUInteger i = 0; i < _peripheral.services.count; i++ ) {
         CBService* service = _peripheral.services[i];
         if( [service.UUID isEqualTo:[CBUUID UUIDWithString:kDeviceDFUServiceUUID]] ) {
@@ -134,8 +136,10 @@ NSString *const kSamd21ServiceUUID = @"88CB59C8-2293-4EE1-8F33-01E7904DB115";
             _samd21PacketCharacteristic = characteristic;
         }
     }
-    if( (_controlPointCharacteristic != nil && _packetCharacteristic != nil && _versionCharacteristic != nil) ||
-       (_samd21ControlPointCharacteristic != nil && _samd21PacketCharacteristic != nil)) {
+    if( _controlPointCharacteristic != nil && _packetCharacteristic != nil && _versionCharacteristic != nil) {
+        if( _samd21Service && (_samd21ControlPointCharacteristic == nil || _samd21PacketCharacteristic == nil) ) {
+            return;
+        }
         if( _state == STATE_ENTERING_BOOTLOADER ) {
             // after regaining connection, query the version to see
             //  if we successfully entered the bootloader
