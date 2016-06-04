@@ -46,7 +46,7 @@ NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
 - (void)deviceConnected:(NDDFUDevice *)device {
     // if we aren't in the "discovery" command line mode, the first time we connect to a device,
     //  we'll kick off the update process
-    if( _deviceToUpdate != nil && _deviceToUpdateUUID != nil ) {
+    if( _deviceToUpdate != nil && _deviceToUpdateUUID != nil && _deviceToUpdate.isConnected ) {
         _deviceToUpdateUUID = nil;
         [_deviceToUpdate startUpdateWithApplication:_firmware];
     }    
@@ -94,7 +94,7 @@ NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
     // start discovering devices
     [self initCentralManager];
     // allow for 5 second timeout finding the device
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         if( _deviceToUpdate == nil ) {
             NSError* error = nil;
             if( uuid == nil ) {
@@ -130,7 +130,7 @@ NSString *const kDeviceDiscoveryDevice = @"kDeviceDiscoveryDevice";
     // start discovering devices
     [self initCentralManager];
     // allow for 5 second timeout finding the device
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         if( _deviceToUpdate == nil ) {
             NSError* error = nil;
             if( uuid == nil ) {

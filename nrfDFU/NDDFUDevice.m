@@ -135,7 +135,7 @@ NSString *const kSamd21ServiceUUID = @"88CB59C8-2293-4EE1-8F33-01E7904DB115";
         }
     }
     if( (_controlPointCharacteristic != nil && _packetCharacteristic != nil && _versionCharacteristic != nil) ||
-       (_samd21ControlPointCharacteristic != nil && _samd21PacketCharacteristic != nil)) {
+         (_samd21ControlPointCharacteristic != nil && _samd21PacketCharacteristic != nil)) {
         if( _state == STATE_ENTERING_BOOTLOADER ) {
             // after regaining connection, query the version to see
             //  if we successfully entered the bootloader

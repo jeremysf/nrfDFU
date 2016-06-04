@@ -53,7 +53,7 @@ int main(int argc, const char * argv[]) {
                                        }];
     } else if( strcmp(argv[1], "discover")  == 0 ) {
         // wait a little bit
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             for( int i = 0; i < dfuController.devices.count; i++ ) {
                 NDDFUDevice* device = dfuController.devices[i];
                 // only print out devices that have the DFU service (devices won't be able to be connected if they don't have the DFU service)
